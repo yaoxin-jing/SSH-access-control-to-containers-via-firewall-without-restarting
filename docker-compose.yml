@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  operator:
+    build: .
+    container_name: operator
+    restart: unless-stopped
+    ports:
+      - "2222:22"  # host:container
