@@ -25,16 +25,18 @@ disable_ssh() {
 }
 
 enable_ssh() {
-  echo "[+] Looking for DROP rule on TCP dport $PORT in $TABLE raw $CHAIN..."
-  RULE_HANDLE=$(sudo nft -a list chain $TABLE raw $CHAIN | grep "tcp dport $PORT drop" | awk '{print $NF}')
+  ensure_table_and_chain
+  echo "[+] Looking for DROP rule on TCP dport $PORT in $TABLE $CHAIN..."
+  
+  RULE_HANDLE=$(sudo nft -a list chain $TABLE $CHAIN | grep "tcp dport $PORT drop" | awk '{print $NF}')
 
   if [ -z "$RULE_HANDLE" ]; then
-    echo "[!] No matching DROP rule found. SSH might already be enabled."
-    exit 0
+    echo "[✓] No DROP rule found — SSH is already enabled."
+    return 0
   fi
 
   echo "[+] Deleting rule with handle $RULE_HANDLE..."
-  sudo nft delete rule $TABLE raw $CHAIN handle "$RULE_HANDLE"
+  sudo nft delete rule $TABLE $CHAIN handle "$RULE_HANDLE"
   echo "[✓] SSH on port $PORT has been re-enabled."
 }
 
