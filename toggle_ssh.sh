@@ -28,7 +28,7 @@ enable_ssh() {
   ensure_table_and_chain
   echo "[+] Looking for DROP rule on TCP dport $PORT in $TABLE $CHAIN..."
   
-  RULE_HANDLE=$(sudo nft -a list chain $TABLE $CHAIN | grep "tcp dport $PORT drop" | awk '{print $NF}')
+  RULE_HANDLE=$(sudo nft -a list chain $TABLE raw $CHAIN | grep "tcp dport $PORT drop" | awk '{print $NF}')
 
   if [ -z "$RULE_HANDLE" ]; then
     echo "[✓] No DROP rule found — SSH is already enabled."
@@ -36,7 +36,7 @@ enable_ssh() {
   fi
 
   echo "[+] Deleting rule with handle $RULE_HANDLE..."
-  sudo nft delete rule $TABLE $CHAIN handle "$RULE_HANDLE"
+  sudo nft delete rule $TABLE raw $CHAIN handle "$RULE_HANDLE"
   echo "[✓] SSH on port $PORT has been re-enabled."
 }
 
@@ -49,6 +49,23 @@ check_status() {
   fi
 }
 
+cleanup_ssh_rules() {
+  ensure_table_and_chain
+  echo "[*] Cleaning up existing DROP rules for port $PORT..."
+  while true; do
+    RULE_HANDLE=$(sudo nft -a list chain $TABLE $CHAIN | grep "tcp dport $PORT drop" | awk '{print $NF}' | head -n1)
+    if [ -z "$RULE_HANDLE" ]; then
+      echo "[✓] No more DROP rules for port $PORT."
+      break
+    fi
+    echo "[*] Deleting rule handle $RULE_HANDLE..."
+    sudo nft delete rule $TABLE $CHAIN handle "$RULE_HANDLE"
+  done
+
+  sudo nft flush ruleset
+  sudo pkill -f socat
+}
+
 case "$1" in
   enable)
     enable_ssh
@@ -58,6 +75,9 @@ case "$1" in
     ;;
   status)
     check_status
+    ;;
+  cleanup)
+    cleanup_ssh_rules
     ;;
   *)
     usage
